@@ -2,7 +2,7 @@
 
 A real-time web dashboard that monitors Claude Code agent team activity - watch your agents collaborate, communicate, and complete tasks in real-time.
 
-![Agent Surveillance Dashboard](docs/agent_surveillance.jpg)
+<video src="docs/demo.mp4" controls width="100%"></video>
 
 ---
 
