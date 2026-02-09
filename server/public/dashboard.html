@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Dashboard</title>
+<style>
+/* ===== CSS Custom Properties ===== */
+:root {
+  --bg-body: #0f1419;
+  --bg-card: #1a1f2e;
+  --bg-card-hover: #1f2537;
+  --bg-header: #151a25;
+  --bg-input: #0d1117;
+  --border-color: #2a3040;
+  --border-subtle: #232938;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6b7280;
+  --blue: #3b82f6;
+  --green: #10b981;
+  --purple: #8b5cf6;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --orange: #f97316;
+  --gray: #6b7280;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+  --sidebar-width: 220px;
+  --header-height: 56px;
+  --transition: 0.2s ease;
+}
+
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-body);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ===== Scrollbar Styling ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ===== App Layout ===== */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ===== Header ===== */
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: var(--header-height);
+  padding: 0 20px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-dot.disconnected {
+  background: var(--red);
+}
+
+.status-dot.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.team-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--purple);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.team-badge .count {
+  background: rgba(255,255,255,0.2);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.header-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-body);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  margin-left: 16px;
+}
+
+.header-tab {
+  padding: 5px 16px;
+  border-radius: var(--radius-xs);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.header-tab.active {
+  background: var(--blue);
+  color: #fff;
+}
+
+.header-tab:hover:not(.active) {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+.header-spacer {
+  flex: 1;
+}
+
+.header-clock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-clock .live-label {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.team-selector {
+  position: relative;
+}
+
+.team-selector select {
+  appearance: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 5px 30px 5px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+.team-selector::after {
+  content: '\25BC';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* ===== Live View Layout ===== */
+#live-view {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ===== Sidebar / Roster ===== */
+#roster {
+  background: var(--bg-header);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.roster-header {
+  padding: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.roster-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+
+.agent-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+  cursor: default;
+}
+
+.agent-card:hover {
+  background: var(--bg-card);
+}
+
+.agent-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.agent-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.agent-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-name {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lead-badge {
+  background: var(--yellow);
+  color: #000;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.agent-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* ===== Main Content Area ===== */
+main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ===== Section Headers ===== */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+}
+
+.count-badge {
+  background: var(--blue);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 10px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.count-badge.green {
+  background: var(--green);
+}
+
+.count-badge.yellow {
+  background: var(--yellow);
+  color: #000;
+}
+
+.count-badge.gray {
+  background: var(--gray);
+}
+
+.locked-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.locked-indicator svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ===== Messages Section ===== */
+#messages {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.message-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  transition: border-color var(--transition);
+}
+
+.message-card:hover {
+  border-color: var(--border-color);
+}
+
+.message-card.unread {
+  border-left: 3px solid var(--blue);
+}
+
+.msg-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.msg-sender-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.msg-sender {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.msg-arrow {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.msg-recipient {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.msg-time {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.msg-type-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.msg-type-badge.task_assignment { background: rgba(59,130,246,0.15); color: var(--blue); }
+.msg-type-badge.shutdown_request { background: rgba(249,115,22,0.15); color: var(--orange); }
+.msg-type-badge.idle_notification { background: rgba(234,179,8,0.15); color: var(--yellow); }
+.msg-type-badge.shutdown_approved { background: rgba(16,185,129,0.15); color: var(--green); }
+.msg-type-badge.text { background: rgba(107,114,128,0.15); color: var(--gray); }
+
+.msg-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.msg-field {
+  font-size: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.msg-field-label {
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.msg-field-value {
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
+.msg-text-preview {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg-summary {
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: rgba(59,130,246,0.08);
+  border-radius: var(--radius-xs);
+  border-left: 2px solid var(--blue);
+}
+
+.msg-expand-btn {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 0;
+  font-weight: 600;
+}
+
+.msg-expand-btn:hover {
+  text-decoration: underline;
+}
+
+.msg-full-text {
+  display: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--bg-body);
+  border-radius: var(--radius-xs);
+}
+
+.msg-full-text.expanded {
+  display: block;
+}
+
+/* ===== Task Board Section ===== */
+#task-board {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  max-height: 45vh;
+}
+
+.task-columns {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.task-column {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-body);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.task-col-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.task-col-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.task-col-dot.pending { background: var(--gray); }
+.task-col-dot.in_progress { background: var(--green); }
+.task-col-dot.completed { background: var(--green); }
+
+.task-col-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.task-col-body {
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.task-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  transition: border-color var(--transition);
+}
+
+.task-card:hover {
+  border-color: var(--border-color);
+}
+
+.task-id {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.task-subject {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 2px;
+  color: var(--text-primary);
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.task-owner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(139,92,246,0.15);
+  color: var(--purple);
+}
+
+.task-dep-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.task-dep-badge.blocks {
+  background: rgba(249,115,22,0.15);
+  color: var(--orange);
+}
+
+.task-dep-badge.blocked {
+  background: rgba(239,68,68,0.15);
+  color: var(--red);
+}
+
+.task-active-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--green);
+  font-weight: 500;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--green);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.completed-check {
+  color: var(--green);
+  font-size: 12px;
+}
+
+/* ===== History View ===== */
+#history-view {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+#session-list {
+  width: 340px;
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.session-list-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.session-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.session-card:hover {
+  border-color: var(--blue);
+  background: var(--bg-card-hover);
+}
+
+.session-card.active {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
+}
+
+.session-team {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.session-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.session-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.session-members-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+#session-detail {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#session-detail-content {
+  flex: 1;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+}
+
+.session-detail-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+#session-roster {
+  background: var(--bg-header);
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+  padding: 8px;
+}
+
+#session-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#session-messages {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#session-messages .message-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+#session-task-board {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-color);
+  min-height: 180px;
+  max-height: 40vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Empty States ===== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  gap: 8px;
+}
+
+.empty-state-icon {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+/* ===== Connection Banner ===== */
+.connection-banner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(239,68,68,0.15);
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.connection-banner.visible {
+  display: flex;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0px;
+  }
+
+  #roster,
+  #session-roster {
+    display: none;
+  }
+
+  #live-view {
+    grid-template-columns: 1fr;
+  }
+
+  #session-detail-content {
+    grid-template-columns: 1fr;
+  }
+
+  #session-list {
+    width: 240px;
+  }
+
+  .task-columns {
+    flex-direction: column;
+  }
+
+  .task-column {
+    min-width: unset;
+  }
+}
+
+@media (max-width: 520px) {
+  header {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .header-title span:first-child {
+    display: none;
+  }
+
+  #session-list {
+    width: 180px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Connection Banner -->
+  <div id="connection-banner" class="connection-banner">
+    <span class="spinner" style="border-color: var(--red); border-top-color: transparent;"></span>
+    Reconnecting to server...
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-title">
+      <span id="status-dot" class="status-dot pulse"></span>
+      <span>Agent Dashboard</span>
+    </div>
+    <div id="team-badge" class="team-badge" style="display:none;">
+      <span id="team-badge-name"></span>
+      <span id="team-badge-count" class="count"></span>
+    </div>
+    <div id="team-selector" class="team-selector" style="display:none;">
+      <select id="team-select" onchange="switchTeam(this.value)"></select>
+    </div>
+    <div class="header-tabs">
+      <button class="header-tab active" id="tab-live" onclick="switchTab('live')">Live</button>
+      <button class="header-tab" id="tab-history" onclick="switchTab('history')">History</button>
+    </div>
+    <div class="header-spacer"></div>
+    <div id="header-clock" class="header-clock">
+      <span class="live-label">Live</span>
+      <span id="clock-time">--:--:--</span>
+    </div>
+  </header>
+
+  <!-- Live View -->
+  <div id="live-view">
+    <!-- Sidebar Roster -->
+    <aside id="roster">
+      <div class="roster-header">AGENT ROSTER</div>
+      <div id="roster-list" class="roster-list"></div>
+    </aside>
+
+    <!-- Main Content -->
+    <main>
+      <!-- Messages Section -->
+      <section id="messages">
+        <div class="section-header">
+          <span class="section-title">MESSAGES</span>
+          <span id="unread-badge" class="count-badge" style="display:none;">0</span>
+        </div>
+        <div id="message-list" class="message-list"></div>
+      </section>
+
+      <!-- Task Board Section -->
+      <section id="task-board">
+        <div class="section-header">
+          <span class="section-title">TASK BOARD</span>
+          <div class="locked-indicator">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            LOCKED
+          </div>
+        </div>
+        <div class="task-columns">
+          <div class="task-column">
+            <div class="task-col-header">
+              <span class="task-col-dot pending"></span>
+              Pending
+              <span id="pending-count" class="task-col-count">0</span>
+            </div>
+            <div id="col-pending" class="task-col-body"></div>
+          </div>
+          <div class="task-column">
+            <div class="task-col-header">
+              <span class="task-col-dot in_progress"></span>
+              In Progress
+              <span id="progress-count" class="task-col-count">0</span>
+            </div>
+            <div id="col-in_progress" class="task-col-body"></div>
+          </div>
+          <div class="task-column">
+            <div class="task-col-header">
+              <span class="completed-check">&#10003;</span>
+              Completed
+              <span id="completed-count" class="task-col-count">0</span>
+            </div>
+            <div id="col-completed" class="task-col-body"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- History View -->
+  <div id="history-view" style="display:none;">
+    <div id="session-list">
+      <div class="session-list-header">SESSIONS</div>
+      <div id="session-list-body"></div>
+    </div>
+    <div id="session-detail">
+      <div class="session-detail-placeholder" id="session-placeholder">
+        Select a session to view details
+      </div>
+      <div id="session-detail-content" style="display:none;">
+        <div id="session-roster"></div>
+        <div id="session-main">
+          <section id="session-messages">
+            <div class="section-header">
+              <span class="section-title">MESSAGES</span>
+              <span id="session-msg-count" class="count-badge gray">0</span>
+            </div>
+            <div id="session-message-list" class="message-list"></div>
+          </section>
+          <section id="session-task-board">
+            <div class="section-header">
+              <span class="section-title">TASK BOARD</span>
+            </div>
+            <div class="task-columns">
+              <div class="task-column">
+                <div class="task-col-header">
+                  <span class="task-col-dot pending"></span>
+                  Pending
+                  <span id="s-pending-count" class="task-col-count">0</span>
+                </div>
+                <div id="s-col-pending" class="task-col-body"></div>
+              </div>
+              <div class="task-column">
+                <div class="task-col-header">
+                  <span class="task-col-dot in_progress"></span>
+                  In Progress
+                  <span id="s-progress-count" class="task-col-count">0</span>
+                </div>
+                <div id="s-col-in_progress" class="task-col-body"></div>
+              </div>
+              <div class="task-column">
+                <div class="task-col-header">
+                  <span class="completed-check">&#10003;</span>
+                  Completed
+                  <span id="s-completed-count" class="task-col-count">0</span>
+                </div>
+                <div id="s-col-completed" class="task-col-body"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Application State =====
+const appState = {
+  connected: false,
+  activeTab: 'live',
+  teams: {},
+  activeTeam: null,
+  teamNames: [],
+  historySessions: [],
+  activeSessionId: null,
+  activeSession: null,
+  expandedMessages: new Set(),
+};
+
+let ws = null;
+let reconnectTimer = null;
+let clockTimer = null;
+
+// ===== Color Mapping =====
+const COLOR_MAP = {
+  purple: '#8b5cf6',
+  blue: '#3b82f6',
+  green: '#10b981',
+  yellow: '#eab308',
+  red: '#ef4444',
+  orange: '#f97316',
+  gray: '#6b7280',
+  teal: '#14b8a6',
+  pink: '#ec4899',
+  indigo: '#6366f1',
+  cyan: '#06b6d4',
+};
+
+function resolveColor(color) {
+  if (!color) return COLOR_MAP.gray;
+  if (color.startsWith('#')) return color;
+  return COLOR_MAP[color.toLowerCase()] || COLOR_MAP.gray;
+}
+
+// ===== Relative Time =====
+function relativeTime(timestamp) {
+  if (!timestamp) return '';
+  const now = Date.now();
+  const ts = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp;
+  if (isNaN(ts)) return '';
+  const diffSec = Math.max(0, Math.floor((now - ts) / 1000));
+  if (diffSec < 5) return 'just now';
+  if (diffSec < 60) return diffSec + 's ago';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return diffMin + 'm ago';
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return diffHr + 'h ago';
+  const diffDay = Math.floor(diffHr / 24);
+  return diffDay + 'd ago';
+}
+
+function formatDate(timestamp) {
+  if (!timestamp) return '--';
+  const d = new Date(timestamp);
+  if (isNaN(d.getTime())) return '--';
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+}
+
+// ===== Escape HTML =====
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  const s = String(str);
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+// ===== Truncate String =====
+function truncate(str, max) {
+  if (!str) return '';
+  if (str.length <= max) return str;
+  return str.slice(0, max) + '...';
+}
+
+// ===== Clock =====
+function updateClock() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('clock-time').textContent = hh + ':' + mm + ':' + ss;
+}
+
+// ===== Tab Switching =====
+function switchTab(tab) {
+  appState.activeTab = tab;
+  document.getElementById('tab-live').classList.toggle('active', tab === 'live');
+  document.getElementById('tab-history').classList.toggle('active', tab === 'history');
+  document.getElementById('live-view').style.display = tab === 'live' ? 'grid' : 'none';
+  document.getElementById('history-view').style.display = tab === 'history' ? 'flex' : 'none';
+
+  if (tab === 'history' && appState.historySessions.length === 0) {
+    sendMessage({ type: 'get_history' });
+  }
+}
+
+// ===== Team Switching =====
+function switchTeam(teamName) {
+  if (!teamName) return;
+  appState.activeTeam = teamName;
+  sendMessage({ type: 'switch_team', teamName: teamName });
+  renderAll();
+}
+
+// ===== Get Current Team Data =====
+function getTeamData() {
+  if (!appState.activeTeam || !appState.teams[appState.activeTeam]) return null;
+  return appState.teams[appState.activeTeam];
+}
+
+// ===== Gather All Messages =====
+function gatherMessages(team) {
+  if (!team || !team.inboxes) return [];
+  const all = [];
+  for (const [agentId, messages] of Object.entries(team.inboxes)) {
+    if (Array.isArray(messages)) {
+      for (const msg of messages) {
+        all.push(msg);
+      }
+    }
+  }
+  // Sort newest first
+  all.sort((a, b) => {
+    const ta = new Date(a.timestamp || 0).getTime();
+    const tb = new Date(b.timestamp || 0).getTime();
+    return tb - ta;
+  });
+  return all;
+}
+
+// ===== Get Members Map =====
+function getMembersMap(team) {
+  const map = {};
+  if (!team || !team.config || !team.config.members) return map;
+  for (const m of team.config.members) {
+    map[m.agentId] = m;
+    map[m.name] = m;
+  }
+  return map;
+}
+
+// ===== Render All =====
+function renderAll() {
+  renderTeamBadge();
+  renderTeamSelector();
+  renderRoster();
+  renderMessages();
+  renderTaskBoard();
+}
+
+// ===== Render Team Badge =====
+function renderTeamBadge() {
+  const badge = document.getElementById('team-badge');
+  const nameEl = document.getElementById('team-badge-name');
+  const countEl = document.getElementById('team-badge-count');
+  const team = getTeamData();
+
+  if (!appState.activeTeam) {
+    badge.style.display = 'none';
+    return;
+  }
+
+  badge.style.display = 'inline-flex';
+  nameEl.textContent = appState.activeTeam;
+  const memberCount = team && team.config && team.config.members ? team.config.members.length : 0;
+  countEl.textContent = memberCount;
+}
+
+// ===== Render Team Selector =====
+function renderTeamSelector() {
+  const container = document.getElementById('team-selector');
+  const select = document.getElementById('team-select');
+
+  if (appState.teamNames.length <= 1) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  const currentVal = select.value;
+  select.innerHTML = '';
+  for (const name of appState.teamNames) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    if (name === appState.activeTeam) opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
+// ===== Render Roster =====
+function renderRoster() {
+  const container = document.getElementById('roster-list');
+  const team = getTeamData();
+
+  if (!team || !team.config || !team.config.members || team.config.members.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#128100;</div>No agents connected</div>';
+    return;
+  }
+
+  container.innerHTML = team.config.members.map(member => renderAgentCard(member)).join('');
+}
+
+function renderAgentCard(member) {
+  const color = resolveColor(member.color);
+  const initial = (member.name || member.agentId || '?').charAt(0).toUpperCase();
+  const isLead = member.agentType === 'team-lead';
+  const modelStr = member.model ? truncate(member.model, 24) : '';
+  const typeStr = member.agentType || '';
+  const metaStr = typeStr + (modelStr ? ' \u00B7 ' + modelStr : '');
+
+  return `
+    <div class="agent-card" title="${esc(member.agentId)}">
+      <div class="agent-avatar" style="background:${color}">${initial}</div>
+      <div class="agent-info">
+        <div class="agent-name-row">
+          <span class="agent-name">${esc(member.name || member.agentId)}</span>
+          ${isLead ? '<span class="lead-badge">LEAD</span>' : ''}
+        </div>
+        <div class="agent-meta">${esc(metaStr)}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== Render Messages =====
+function renderMessages() {
+  const container = document.getElementById('message-list');
+  const unreadBadge = document.getElementById('unread-badge');
+  const team = getTeamData();
+  const messages = gatherMessages(team);
+  const membersMap = getMembersMap(team);
+
+  // Count unread
+  let unread = 0;
+  for (const msg of messages) {
+    if (msg.read === false) unread++;
+  }
+
+  if (unread > 0) {
+    unreadBadge.style.display = 'inline-block';
+    unreadBadge.textContent = unread;
+  } else {
+    unreadBadge.style.display = 'none';
+  }
+
+  if (messages.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#128172;</div>No messages yet</div>';
+    return;
+  }
+
+  container.innerHTML = messages.map((msg, idx) => renderMessageCard(msg, idx, membersMap, 'live')).join('');
+}
+
+function renderMessageCard(msg, idx, membersMap, prefix) {
+  const senderMember = membersMap[msg.from] || {};
+  const senderColor = resolveColor(msg.color || senderMember.color);
+  const senderName = msg.from || 'Unknown';
+  const recipientName = msg.to || 'Unknown';
+  const time = relativeTime(msg.timestamp);
+  const isUnread = msg.read === false;
+  const msgType = (msg.messageType || 'text').toLowerCase();
+  const msgId = prefix + '-msg-' + idx;
+
+  let typeLabel = msgType.toUpperCase().replace(/_/g, '_');
+  let bodyHtml = '';
+
+  if (msgType === 'task_assignment' && msg.parsedContent) {
+    const pc = msg.parsedContent;
+    bodyHtml = `
+      <div class="msg-fields">
+        ${pc.taskId != null ? `<div class="msg-field"><span class="msg-field-label">taskId</span><span class="msg-field-value">#${esc(pc.taskId)}</span></div>` : ''}
+        ${pc.subject ? `<div class="msg-field"><span class="msg-field-label">subject</span><span class="msg-field-value">${esc(pc.subject)}</span></div>` : ''}
+        ${pc.description ? `<div class="msg-field"><span class="msg-field-label">description</span><span class="msg-field-value">${esc(truncate(pc.description, 200))}</span></div>` : ''}
+        ${pc.assignedBy ? `<div class="msg-field"><span class="msg-field-label">assignedBy</span><span class="msg-field-value">${esc(pc.assignedBy)}</span></div>` : ''}
+      </div>
+    `;
+  } else if (msgType === 'shutdown_request' && msg.parsedContent) {
+    const pc = msg.parsedContent;
+    bodyHtml = `
+      <div class="msg-fields">
+        ${pc.requestId != null ? `<div class="msg-field"><span class="msg-field-label">requestId</span><span class="msg-field-value">${esc(pc.requestId)}</span></div>` : ''}
+        ${pc.from ? `<div class="msg-field"><span class="msg-field-label">from</span><span class="msg-field-value">${esc(pc.from)}</span></div>` : ''}
+        ${pc.reason ? `<div class="msg-field"><span class="msg-field-label">reason</span><span class="msg-field-value">${esc(pc.reason)}</span></div>` : ''}
+      </div>
+    `;
+  } else if (msgType === 'idle_notification' && msg.parsedContent) {
+    const pc = msg.parsedContent;
+    bodyHtml = `
+      <div class="msg-fields">
+        ${pc.from ? `<div class="msg-field"><span class="msg-field-label">from</span><span class="msg-field-value">${esc(pc.from)}</span></div>` : ''}
+        ${pc.idleReason ? `<div class="msg-field"><span class="msg-field-label">idleReason</span><span class="msg-field-value">${esc(pc.idleReason)}</span></div>` : ''}
+      </div>
+    `;
+  } else if (msgType === 'shutdown_approved' && msg.parsedContent) {
+    const pc = msg.parsedContent;
+    bodyHtml = `
+      <div class="msg-fields">
+        ${pc.requestId != null ? `<div class="msg-field"><span class="msg-field-label">requestId</span><span class="msg-field-value">${esc(pc.requestId)}</span></div>` : ''}
+        ${pc.from ? `<div class="msg-field"><span class="msg-field-label">from</span><span class="msg-field-value">${esc(pc.from)}</span></div>` : ''}
+      </div>
+    `;
+  } else {
+    // Plain text message
+    const text = msg.text || '';
+    const summary = msg.summary || '';
+    if (summary) {
+      const isExpanded = appState.expandedMessages.has(msgId);
+      bodyHtml = `
+        <div class="msg-summary">${esc(summary)}</div>
+        ${text ? `
+          <button class="msg-expand-btn" onclick="toggleExpand('${msgId}')">${isExpanded ? 'Collapse' : 'Show full text'}</button>
+          <div class="msg-full-text ${isExpanded ? 'expanded' : ''}" id="${msgId}-full">${esc(text)}</div>
+        ` : ''}
+      `;
+    } else if (text) {
+      if (text.length > 200) {
+        const isExpanded = appState.expandedMessages.has(msgId);
+        bodyHtml = `
+          <div class="msg-text-preview">${esc(isExpanded ? text : truncate(text, 200))}</div>
+          <button class="msg-expand-btn" onclick="toggleExpand('${msgId}')">${isExpanded ? 'Collapse' : 'Show more'}</button>
+          <div class="msg-full-text ${isExpanded ? 'expanded' : ''}" id="${msgId}-full">${esc(text)}</div>
+        `;
+      } else {
+        bodyHtml = `<div class="msg-text-preview">${esc(text)}</div>`;
+      }
+    }
+  }
+
+  return `
+    <div class="message-card${isUnread ? ' unread' : ''}">
+      <div class="msg-header">
+        <span class="msg-sender-dot" style="background:${senderColor}"></span>
+        <span class="msg-sender">${esc(senderName)}</span>
+        <span class="msg-arrow">&rarr;</span>
+        <span class="msg-recipient">${esc(recipientName)}</span>
+        <span class="msg-time">${esc(time)}</span>
+      </div>
+      <span class="msg-type-badge ${msgType}">${typeLabel}</span>
+      ${bodyHtml}
+    </div>
+  `;
+}
+
+function toggleExpand(msgId) {
+  if (appState.expandedMessages.has(msgId)) {
+    appState.expandedMessages.delete(msgId);
+  } else {
+    appState.expandedMessages.add(msgId);
+  }
+  // Re-render messages for current view
+  if (appState.activeTab === 'live') {
+    renderMessages();
+  } else if (appState.activeSession) {
+    renderSessionMessages(appState.activeSession);
+  }
+}
+
+// ===== Render Task Board =====
+function renderTaskBoard() {
+  const team = getTeamData();
+  // tasks might be an object {id: task} or array - normalize to array
+  let tasks = [];
+  if (team && team.tasks) {
+    if (Array.isArray(team.tasks)) {
+      tasks = team.tasks;
+    } else {
+      tasks = Object.values(team.tasks);
+    }
+  }
+  const membersMap = getMembersMap(team);
+  renderTaskColumns(tasks, membersMap, 'col-', 'pending-count', 'progress-count', 'completed-count');
+}
+
+function renderTaskColumns(tasks, membersMap, colPrefix, pendingCountId, progressCountId, completedCountId) {
+  // Filter out internal and deleted tasks
+  const visible = tasks.filter(t => !t.isInternal && t.status !== 'deleted');
+
+  const buckets = { pending: [], in_progress: [], completed: [] };
+  for (const t of visible) {
+    const status = t.status || 'pending';
+    if (buckets[status]) {
+      buckets[status].push(t);
+    }
+  }
+
+  document.getElementById(pendingCountId).textContent = buckets.pending.length;
+  document.getElementById(progressCountId).textContent = buckets.in_progress.length;
+  document.getElementById(completedCountId).textContent = buckets.completed.length;
+
+  for (const [status, items] of Object.entries(buckets)) {
+    const col = document.getElementById(colPrefix + status);
+    if (items.length === 0) {
+      col.innerHTML = '<div class="empty-state" style="padding:20px;font-size:12px;">No tasks</div>';
+    } else {
+      col.innerHTML = items.map(t => renderTaskCard(t, membersMap)).join('');
+    }
+  }
+}
+
+function renderTaskCard(task, membersMap) {
+  const ownerMember = membersMap[task.owner] || {};
+  const ownerColor = resolveColor(ownerMember.color);
+  const ownerName = ownerMember.name || task.owner || '';
+
+  let depsHtml = '';
+  if (task.blocks && task.blocks.length > 0) {
+    for (const dep of task.blocks) {
+      depsHtml += `<span class="task-dep-badge blocks">blocks: #${esc(dep)}</span>`;
+    }
+  }
+  if (task.blockedBy && task.blockedBy.length > 0) {
+    for (const dep of task.blockedBy) {
+      depsHtml += `<span class="task-dep-badge blocked">blocked #${esc(dep)}</span>`;
+    }
+  }
+
+  let activeFormHtml = '';
+  if (task.activeForm && task.status === 'in_progress') {
+    activeFormHtml = `
+      <div class="task-active-form">
+        <span class="spinner"></span>
+        <span>${esc(truncate(task.activeForm, 60))}</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="task-card">
+      <div class="task-id">#${esc(task.id)}</div>
+      <div class="task-subject">${esc(task.subject || 'Untitled')}</div>
+      <div class="task-meta">
+        ${ownerName ? `<span class="task-owner-badge" style="background:${ownerColor}22;color:${ownerColor}">${esc(ownerName)}</span>` : ''}
+        ${depsHtml}
+      </div>
+      ${activeFormHtml}
+    </div>
+  `;
+}
+
+// ===== Render History List =====
+function renderHistoryList() {
+  const container = document.getElementById('session-list-body');
+  const sessions = appState.historySessions;
+
+  if (!sessions || sessions.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#128218;</div>No sessions found</div>';
+    return;
+  }
+
+  container.innerHTML = sessions.map(s => {
+    const isActive = s.id === appState.activeSessionId;
+    const memberCount = s.members ? s.members.length : (s.memberCount || 0);
+    return `
+      <div class="session-card${isActive ? ' active' : ''}" onclick="selectSession(${s.id})">
+        <div class="session-team">${esc(s.team_name || s.teamName || s.team || 'Unknown Team')}</div>
+        <div class="session-desc">${esc(s.description || '')}</div>
+        <div class="session-dates">
+          <span>Started: ${formatDate(s.created_at || s.createdAt || s.startedAt)}</span>
+          <span>Ended: ${formatDate(s.ended_at || s.endedAt)}</span>
+        </div>
+        <div class="session-members-count">${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectSession(sessionId) {
+  appState.activeSessionId = sessionId;
+  sendMessage({ type: 'get_session', sessionId: sessionId });
+  renderHistoryList();
+  // Show loading placeholder while waiting for data
+  document.getElementById('session-placeholder').textContent = 'Loading session...';
+  document.getElementById('session-placeholder').style.display = 'flex';
+  document.getElementById('session-detail-content').style.display = 'none';
+}
+
+// ===== Render Session Detail =====
+function renderSessionDetail(session) {
+  if (!session) {
+    document.getElementById('session-placeholder').style.display = 'flex';
+    document.getElementById('session-placeholder').textContent = 'Select a session to view details';
+    document.getElementById('session-detail-content').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('session-placeholder').style.display = 'none';
+  document.getElementById('session-detail-content').style.display = 'grid';
+
+  // Render roster
+  const rosterContainer = document.getElementById('session-roster');
+  const members = session.members || (session.config && session.config.members) || [];
+  if (members.length > 0) {
+    rosterContainer.innerHTML = members.map(m => renderAgentCard(m)).join('');
+  } else {
+    rosterContainer.innerHTML = '<div class="empty-state" style="padding:20px;">No members</div>';
+  }
+
+  // Render messages
+  renderSessionMessages(session);
+
+  // Render tasks
+  let tasks = session.tasks || [];
+  if (!Array.isArray(tasks)) tasks = Object.values(tasks);
+  const membersMap = {};
+  for (const m of members) {
+    if (m.agentId) membersMap[m.agentId] = m;
+    if (m.name) membersMap[m.name] = m;
+    if (m.agent_id) membersMap[m.agent_id] = m;
+  }
+  renderTaskColumns(tasks, membersMap, 's-col-', 's-pending-count', 's-progress-count', 's-completed-count');
+}
+
+function renderSessionMessages(session) {
+  const container = document.getElementById('session-message-list');
+  const countEl = document.getElementById('session-msg-count');
+  const members = session.members || (session.config && session.config.members) || [];
+  const membersMap = {};
+  for (const m of members) {
+    membersMap[m.agentId] = m;
+    membersMap[m.name] = m;
+  }
+
+  // Gather messages from session - normalize SQLite column names
+  let messages = [];
+  if (session.messages && Array.isArray(session.messages)) {
+    messages = session.messages.map(m => ({
+      from: m.from || m.from_agent || '',
+      to: m.to || m.inbox_owner || '',
+      text: m.text || m.raw_text || '',
+      timestamp: m.timestamp || '',
+      summary: m.summary || '',
+      color: m.color || '',
+      read: m.read != null ? m.read : m.isRead,
+      messageType: m.messageType || m.message_type || 'text',
+      parsedContent: m.parsedContent || m.parsedJson || null,
+    }));
+  } else if (session.inboxes) {
+    for (const [agentId, msgs] of Object.entries(session.inboxes)) {
+      if (Array.isArray(msgs)) {
+        messages.push(...msgs);
+      }
+    }
+  }
+  messages.sort((a, b) => {
+    const ta = new Date(a.timestamp || 0).getTime();
+    const tb = new Date(b.timestamp || 0).getTime();
+    return tb - ta;
+  });
+
+  countEl.textContent = messages.length;
+
+  if (messages.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#128172;</div>No messages in session</div>';
+    return;
+  }
+
+  container.innerHTML = messages.map((msg, idx) => renderMessageCard(msg, idx, membersMap, 'session')).join('');
+}
+
+// ===== WebSocket Connection =====
+function connect() {
+  if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+    return;
+  }
+
+  try {
+    ws = new WebSocket('ws://localhost:3847');
+  } catch (e) {
+    scheduleReconnect();
+    return;
+  }
+
+  ws.onopen = function() {
+    appState.connected = true;
+    document.getElementById('status-dot').classList.remove('disconnected');
+    document.getElementById('status-dot').classList.add('pulse');
+    document.getElementById('connection-banner').classList.remove('visible');
+
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  };
+
+  ws.onmessage = function(event) {
+    try {
+      const msg = JSON.parse(event.data);
+      handleMessage(msg);
+    } catch (e) {
+      console.error('Failed to parse message:', e);
+    }
+  };
+
+  ws.onclose = function() {
+    appState.connected = false;
+    document.getElementById('status-dot').classList.add('disconnected');
+    document.getElementById('status-dot').classList.remove('pulse');
+    document.getElementById('connection-banner').classList.add('visible');
+    scheduleReconnect();
+  };
+
+  ws.onerror = function() {
+    // onclose will fire after onerror
+  };
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(function() {
+    reconnectTimer = null;
+    connect();
+  }, 5000);
+}
+
+function sendMessage(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+}
+
+// ===== Message Handler =====
+function handleMessage(msg) {
+  const type = msg.type;
+  const data = msg.data !== undefined ? msg.data : msg;
+
+  switch (type) {
+    case 'full_state':
+      handleFullState(data);
+      break;
+
+    case 'team_update':
+      handleTeamUpdate(data);
+      break;
+
+    case 'heartbeat':
+      // Just keep alive
+      break;
+
+    case 'history':
+      handleHistory(data);
+      break;
+
+    case 'session':
+      handleSession(data);
+      break;
+
+    default:
+      console.log('Unknown message type:', type);
+  }
+}
+
+function handleFullState(data) {
+  if (data.teams) {
+    appState.teams = data.teams;
+  }
+  if (data.activeTeam) {
+    appState.activeTeam = data.activeTeam;
+  }
+  if (data.teamNames) {
+    appState.teamNames = data.teamNames;
+  }
+  // If no active team but we have team names, pick the first
+  if (!appState.activeTeam && appState.teamNames.length > 0) {
+    appState.activeTeam = appState.teamNames[0];
+  }
+  renderAll();
+}
+
+function handleTeamUpdate(data) {
+  const teamName = data.teamName;
+  if (!teamName) return;
+
+  // Ensure team object exists
+  if (!appState.teams[teamName]) {
+    appState.teams[teamName] = { config: { members: [] }, inboxes: {}, tasks: [] };
+  }
+
+  const team = appState.teams[teamName];
+  const changeType = data.changeType;
+  const changeData = data.changeData;
+
+  if (changeType === 'config') {
+    if (changeData) {
+      // changeData is the full team object { config, inboxes, tasks }
+      if (changeData.config) {
+        team.config = changeData.config;
+      } else {
+        team.config = changeData;
+      }
+      if (changeData.inboxes) team.inboxes = changeData.inboxes;
+      if (changeData.tasks) team.tasks = changeData.tasks;
+    }
+    // Update team names if this is new
+    if (!appState.teamNames.includes(teamName)) {
+      appState.teamNames.push(teamName);
+    }
+  } else if (changeType === 'inbox') {
+    if (changeData) {
+      // changeData has { agentName, messages } from the server
+      if (changeData.agentName && changeData.messages) {
+        team.inboxes[changeData.agentName] = changeData.messages;
+      } else if (changeData.messages) {
+        // Replace all inboxes with merged messages array - rebuild from messages
+        // Keep existing inboxes, this is a partial update
+      } else {
+        team.inboxes = changeData;
+      }
+    }
+  } else if (changeType === 'task') {
+    if (changeData) {
+      // changeData has { taskId, tasks } from the server
+      if (changeData.tasks) {
+        team.tasks = changeData.tasks;
+      } else if (changeData.taskId && changeData.task) {
+        if (!team.tasks) team.tasks = {};
+        team.tasks[changeData.taskId] = changeData.task;
+      }
+    }
+  }
+
+  // Only re-render if this is the active team
+  if (teamName === appState.activeTeam) {
+    if (changeType === 'config') {
+      renderTeamBadge();
+      renderRoster();
+    } else if (changeType === 'inbox') {
+      renderMessages();
+    } else if (changeType === 'task') {
+      renderTaskBoard();
+    } else {
+      renderAll();
+    }
+  }
+}
+
+function handleHistory(data) {
+  appState.historySessions = Array.isArray(data) ? data : [];
+  renderHistoryList();
+}
+
+function handleSession(data) {
+  appState.activeSession = data;
+  renderSessionDetail(data);
+}
+
+// ===== Initialization =====
+function init() {
+  // Start clock
+  updateClock();
+  clockTimer = setInterval(updateClock, 1000);
+
+  // Periodically update relative timestamps (every 15 seconds)
+  setInterval(function() {
+    if (appState.activeTab === 'live') {
+      renderMessages();
+    }
+  }, 15000);
+
+  // Connect WebSocket
+  connect();
+}
+
+// Start the app
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
